@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRESQL_PASSWORD: mypass
+      POSTGRESQL_DATABASE: addressbook_db
+      POSTGRESQL_USERNAME: addressbook
+    volumes:
+      - ./db/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  # (см.документацию к БД - '/docker-entrypoint-initdb.d' является специальным каталогом в контейнерах PostgreSQL Docker, который используется для инициализации базы данных при первом запуске контейнера)
+      - data-db:/var/lib/postgresql/data  # указываем каталог (см.документацию к БД) для сохранения данных в БД после остановки docker-контейнера
+    networks:
+      - backend   # указывается, чтоб контейнеры addressbook и db видели друг друга
+
+  addressbook:
+    image: addressbook:1
+    ports:
+      - 8080:8080 # если указать 8080 - наружу будет открыт рандомный порт (посмотреть можно командой docker-compose ps)
+    volumes:
+      - ./configuration:/app/config # Настройки подключения к базе данных в докер-контейнере db
+    networks:
+      - backend   # указывается, чтоб контейнеры addressbook и db видели друг друга
+    depends_on:   # чтоб сервис 'addressbook' запускался только ПОСЛЕ запуска сервиса 'db'
+      - db
+
+
+volumes:  # для сохранения данных в БД после остановки docker-контейнера.
+  data-db: {} # Также дублируется в db.volumes
+
+
+networks:
+  backend:  # указывается, чтоб контейнеры 'addressbook' и 'db' видели друг друга. Дублируется в каждый сервис в секцию 'networks'
